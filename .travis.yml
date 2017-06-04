@@ -1,9 +1,22 @@
-dist: trusty
-sudo: false
 branches:
   except:
     - trunk
 language: c++
+matrix:
+  include:
+    - os: linux
+      dist: trusty
+      sudo: false
+      env: TRAVIS_USE_CMAKE=true
+    - os: linux
+      dist: trusty
+      sudo: false
+      env: TRAVIS_USE_CMAKE=false TRAVIS_CONFIGURE_OPTIONS="--enable-python --enable-doxygen"
+    - os: osx
+      env: TRAVIS_USE_CMAKE=true TRAVIS_CMAKE_OPTIONS="-DWITH_OFX=:BOOL=OFF"
+  allow_failures:
+    - os: osx
+      env: TRAVIS_USE_CMAKE=true TRAVIS_CMAKE_OPTIONS="-DWITH_OFX=:BOOL=OFF"
 compiler:
   - gcc
 addons:
@@ -30,25 +43,28 @@ addons:
       - xsltproc
       - zlib1g-dev
 install:
+  - >
+    if [ $TRAVIS_OS_NAME = "osx" ]; then
+      rvm get head # https://github.com/travis-ci/travis-ci/issues/6307
+      brew install intltool swig doxygen boost guile aqbanking libdbi glib \
+                   libxslt python
+    fi
   - git clone https://github.com/google/googletest -b release-1.8.0 ~/gtest
 env:
   global:
     - GTEST_ROOT=~/gtest/googletest
     - GMOCK_ROOT=~/gtest/googlemock
     - TZ="America/Los_Angeles"
-  matrix:
-    - TRAVIS_USE_CMAKE=true
-    - TRAVIS_USE_CMAKE=false
 script: >
   if [ ${TRAVIS_USE_CMAKE} = "true" ]; then
     mkdir build &&
     cd build &&
-    cmake ../ &&
+    cmake ${TRAVIS_CMAKE_OPTIONS} ../ &&
     make &&
     make check
   else
     ./autogen.sh &&
-    ./configure --enable-python --enable-doxygen &&
+    ./configure ${TRAVIS_CONFIGURE_OPTIONS} &&
     make &&
     make doc &&
     make check
