@@ -18,4 +18,25 @@ install:
   - sudo apt-get install -qq libboost-all-dev
   - sudo apt-get --reinstall install -qq language-pack-en language-pack-fr
   - git clone https://github.com/google/googletest -b release-1.8.0 ~/gtest
-script: ./autogen.sh && ./configure --enable-python GTEST_ROOT=~/gtest/googletest GMOCK_ROOT=~/gtest/googlemock && make && TZ="America/Los_Angeles" make check
+env:
+  global:
+    - GTEST_ROOT=~/gtest/googletest
+    - GMOCK_ROOT=~/gtest/googlemock
+    - TZ="America/Los_Angeles"
+  matrix:
+    - TRAVIS_USE_CMAKE=true
+    - TRAVIS_USE_CMAKE=false
+script: >
+  if [ ${TRAVIS_USE_CMAKE} = "true" ]; then
+    mkdir build &&
+    cd build &&
+    cmake ../ &&
+    make &&
+    make check
+  else
+    ./autogen.sh &&
+    ./configure --enable-python --enable-doxygen &&
+    make &&
+    make doc &&
+    make check
+  fi
